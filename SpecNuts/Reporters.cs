@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using SpecNuts.Model;
 using TechTalk.SpecFlow;
 
@@ -39,9 +40,9 @@ namespace SpecNuts
 			{
 				Name = ScenarioStepContext.Current.StepInfo.Text,
 				StartTime = starttime,
-                Keyword = ScenarioContext.Current.CurrentScenarioBlock + " ",
-                Id = ScenarioStepContext.Current.StepInfo.Text.Replace(" ", "-").ToLower()
-            };
+				Keyword = ScenarioContext.Current.CurrentScenarioBlock + " ",
+				Id = ScenarioStepContext.Current.StepInfo.Text.Replace(" ", "-").ToLower()
+			};
 
 			var attr = method.GetCustomAttributes(true).OfType<StepDefinitionBaseAttribute>().FirstOrDefault();
 			if (attr != null)
@@ -58,13 +59,15 @@ namespace SpecNuts
 						if (table != null)
 						{
 
-						    step.Rows = new List<Row> {new Row() {Cells = table.Header.ToList()}};
+							step.Rows = new List<Row> { new Row() { Cells = table.Header.ToList() } };
 
-						    foreach (var tableRow in table.Rows)
-						    {
-                                step.Rows.Add(new Row() { Cells = tableRow.Select(x => x.Value).ToList()
-                                });
-                            }
+							foreach (var tableRow in table.Rows)
+							{
+								step.Rows.Add(new Row()
+								{
+									Cells = tableRow.Select(x => x.Value).ToList()
+								});
+							}
 						}
 						else
 						{
@@ -96,15 +99,15 @@ namespace SpecNuts
 							var table = arg as Table;
 							if (table != null)
 							{
-							    step.Rows = new List<Row> {new Row() {Cells = table.Header.ToList()}};
+								step.Rows = new List<Row> { new Row() { Cells = table.Header.ToList() } };
 
-                                foreach (var tableRow in table.Rows)
-                                {
-                                    step.Rows.Add(new Row()
-                                    {
-                                        Cells = tableRow.Select(x => x.Value).ToList()
-                                    });
-                                }
+								foreach (var tableRow in table.Rows)
+								{
+									step.Rows.Add(new Row()
+									{
+										Cells = tableRow.Select(x => x.Value).ToList()
+									});
+								}
 							}
 							else
 							{
@@ -129,19 +132,19 @@ namespace SpecNuts
 				}
 			}
 
-		    step.Name = ScenarioStepContext.Current.StepInfo.Text;
+			step.Name = ScenarioStepContext.Current.StepInfo.Text;
 
 			return step;
 		}
 
-		internal static void ExecuteStep(Action action, params object[] args)
+		internal static async Task ExecuteStep(Func<Task> stepFunc, params object[] args)
 		{
-			ExecuteStep(action, null, args);
+			await ExecuteStep(stepFunc, null, args);
 		}
 
-		internal static void ExecuteStep(Action action, MethodBase methodBase, params object[] args)
+		internal static async Task ExecuteStep(Func<Task> stepFunc, MethodBase methodBase, params object[] args)
 		{
-			methodBase = methodBase ?? action.Method;
+			methodBase = methodBase ?? stepFunc.Method;
 
 			var currentSteps = new Dictionary<Reporter, Step>();
 
@@ -161,13 +164,13 @@ namespace SpecNuts
 			Exception actionException = null;
 			try
 			{
-				if (!action.Method.GetParameters().Any())
+				if (!stepFunc.Method.GetParameters().Any())
 				{
-					action.Method.Invoke(action.Target, null);
+					await (Task)stepFunc.Method.Invoke(stepFunc.Target, null);
 				}
 				else
 				{
-					action.Method.Invoke(action.Target, args);
+					await (Task)stepFunc.Method.Invoke(stepFunc.Target, args);
 				}
 			}
 			catch (Exception ex)
@@ -201,20 +204,25 @@ namespace SpecNuts
 				}
 
 
-                foreach (var reporter in GetAll())
+				foreach (var reporter in GetAll())
 				{
 					reporter.CurrentStep.EndTime = endtime;
-				    reporter.CurrentStep.Result = new StepResult
-				    {
-				        Duration =
-				            (long) ((endtime - reporter.CurrentStep.StartTime).TotalMilliseconds*1000000),
-				        Status = testResult,
-				        Error = actionException != null ? actionException.ToExceptionInfo().Message : string.Empty
-				    };
+					reporter.CurrentStep.Result = new StepResult
+					{
+						Duration =
+							(long)((endtime - reporter.CurrentStep.StartTime).TotalMilliseconds * 1000000),
+						Status = testResult,
+						Error = actionException != null ? actionException.ToExceptionInfo().Message : string.Empty
+					};
 
 					OnFinishedStep(reporter);
 
 					reporter.CurrentStep = currentSteps[reporter];
+				}
+
+				if (actionException != null)
+				{
+					throw actionException;
 				}
 			}
 		}

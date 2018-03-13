@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using SpecNuts.ReportingAspect;
 
 namespace SpecNuts
@@ -6,9 +7,9 @@ namespace SpecNuts
 	[Reporting]
 	public abstract class ReportingStepDefinitions : ContextBoundObject
 	{
-		public void ReportStep(Action action, params object[] args)
+		public async Task ReportStep(Func<Task> stepFunc, params object[] args)
 		{
-			Reporters.ExecuteStep(action, args);
+			await Reporters.ExecuteStep(stepFunc, args);
 		}
 	}
 }

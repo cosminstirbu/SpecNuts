@@ -1,4 +1,5 @@
 ﻿using System.Runtime.Remoting.Messaging;
+using System.Threading.Tasks;
 
 namespace SpecNuts.ReportingAspect
 {
@@ -19,26 +20,40 @@ namespace SpecNuts.ReportingAspect
 
 		public IMessage SyncProcessMessage(IMessage msg)
 		{
-			var methodMessage = new MethodCallMessageWrapper((IMethodCallMessage) msg);
+			var methodMessage = new MethodCallMessageWrapper((IMethodCallMessage)msg);
+
+			// Avoid reporting proxy method calls for fields injected via the constructor
+			// in the step definition classes. This caused some steps to pe reported twice.
+			if (methodMessage.MethodName == "FieldGetter")
+			{
+				return NextSink.SyncProcessMessage(msg);
+			}
 
 			IMethodReturnMessage mrm = null;
-
-			Reporters.ExecuteStep(
+			var task = Reporters.ExecuteStep(
 				() =>
 				{
-					var rtnMsg = NextSink.SyncProcessMessage(msg);
-					mrm = (IMethodReturnMessage)rtnMsg;
+					mrm = (IMethodReturnMessage)NextSink.SyncProcessMessage(msg);
 
 					if (mrm.Exception != null)
 					{
-						throw mrm.Exception;
+						return Task.FromException(mrm.Exception);
 					}
+
+					return (mrm.ReturnValue as Task) ?? Task.CompletedTask;
 				},
 				methodMessage.MethodBase,
 				methodMessage.Args
 				);
 
-			return mrm;
+			if (task.IsCompleted)
+			{
+				return mrm;
+			}
+			else
+			{
+				return new ReturnMessage(task, null, 0, mrm.LogicalCallContext, methodMessage);
+			}
 		}
 	}
 }
