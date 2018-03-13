@@ -28,10 +28,10 @@ namespace SpecNuts
 					}
 				}
 
-			    feature.Result = feature.Elements.Exists(o => o.Result == TestResult.failed)
-			        ? TestResult.failed
-			        : TestResult.passed;
-    
+				feature.Result = feature.Elements.Exists(o => o.Result == TestResult.failed)
+					? TestResult.failed
+					: TestResult.passed;
+
 				feature.EndTime = CurrentRunTime;
 				OnFinishedFeature(reporter);
 				reporter.CurrentFeature = null;
@@ -44,10 +44,10 @@ namespace SpecNuts
 			foreach (var reporter in reporters.ToArray())
 			{
 				var scenario = reporter.CurrentScenario;
-                scenario.EndTime = CurrentRunTime;
-			    scenario.Result = scenario.Steps.Exists(o => o.Result.Status == TestResult.failed)
-			        ? TestResult.failed
-			        : TestResult.passed;
+				scenario.EndTime = CurrentRunTime;
+				scenario.Result = scenario.Steps.Exists(o => o.Result.Status == TestResult.failed)
+					? TestResult.failed
+					: TestResult.passed;
 				OnFinishedScenario(reporter);
 				reporter.CurrentScenario = null;
 			}
@@ -89,15 +89,17 @@ namespace SpecNuts
 
 			foreach (var reporter in reporters)
 			{
+				var featureId = FeatureContext.Current.FeatureInfo.Title.Replace(" ", "-").ToLower();
 				var feature = new Feature
 				{
-                    Tags = FeatureContext.Current.FeatureInfo.Tags.Select(tag => new Tag() { Name = "@"+ tag }).ToList(),
-                    Elements = new List<Scenario>(),
+					Tags = FeatureContext.Current.FeatureInfo.Tags.Select(tag => new Tag() { Name = "@" + tag }).ToList(),
+					Elements = new List<Scenario>(),
 					StartTime = starttime,
 					Name = FeatureContext.Current.FeatureInfo.Title,
 					Description = FeatureContext.Current.FeatureInfo.Description,
-                    Id = FeatureContext.Current.FeatureInfo.Title.Replace(" ", "-").ToLower()
-                };
+					Id = featureId,
+					Uri = $"/{featureId}"
+				};
 
 				reporter.Report.Features.Add(feature);
 				reporter.CurrentFeature = feature;
@@ -115,12 +117,12 @@ namespace SpecNuts
 			{
 				var scenario = new Scenario
 				{
-                    Tags = ScenarioContext.Current.ScenarioInfo.Tags.Select(tag => new Tag() { Name = "@" + tag }).ToList(),
-                    StartTime = starttime,
+					Tags = ScenarioContext.Current.ScenarioInfo.Tags.Select(tag => new Tag() { Name = "@" + tag }).ToList(),
+					StartTime = starttime,
 					Name = ScenarioContext.Current.ScenarioInfo.Title,
-                    Steps = new List<Step>(),
-                    Description = ScenarioContext.Current.ScenarioInfo.Title
-                };
+					Steps = new List<Step>(),
+					Description = ScenarioContext.Current.ScenarioInfo.Title
+				};
 
 				reporter.CurrentFeature.Elements.Add(scenario);
 				reporter.CurrentScenario = scenario;
