@@ -103,6 +103,7 @@
     <Compile Include="Reporter.cs" />
     <Compile Include="Reporters.Events.cs" />
     <Compile Include="ReportingStepDefinitions.cs" />
+    <Compile Include="Model\Embedding.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="App.config.transform" />
